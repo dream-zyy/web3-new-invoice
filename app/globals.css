@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@import "tailwindcss/preflight";
+@reference "tailwindcss";
+@tailwind utilities;
+:root {
+    --background: #020617; /* Slate 950 */
+    --foreground: #e2e8f0;
+}
+body {
+    @apply bg-[#020617] text-gray-200 antialiased;
+}
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+/* 玻璃拟态效果类 */
+.glass-panel {
+    @apply bg-slate-900/50 backdrop-blur-md border border-slate-800/50;
+}

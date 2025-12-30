@@ -1,0 +1,170 @@
+'use client';
+import Link from 'next/link';
+import {ConnectButton} from '@rainbow-me/rainbowkit';
+import {useAccount, useWatchContractEvent} from 'wagmi';
+import {CONTRACT_ADDRESS, INVOICE_ABI} from '@/config/contract';
+import {FileText, Plus, Database, Trash2, AlertCircle} from 'lucide-react';
+import {useLiveQuery} from 'dexie-react-hooks';
+import {db} from '@/lib/db';
+
+/**
+ * 核心逻辑解析
+ * 监听： useWatchContractEvent 持续在后台运行，每 10 秒轮询一次链上数据。只要发现新的 InvoiceCreated 事件，就会触发回调。
+ * 存储： 在 onLogs 回调中，我们直接调用 db.invoices.put(...)。这里利用了浏览器底层的 IndexedDB（通过 Dexie 封装），它是一个持久化的 NoSQL 数据库。数据存入后，即使你关闭浏览器，数据也依然存在。
+ * 去重： put 方法是“更新或插入”。如果数据库里已经有了相同的 tokenId，它就不会重复插入，避免重复数据。
+ * 展示： useLiveQuery 是 Dexie 的 React 钩子。一旦 db.invoices 表中有数据变动（比如新存入了一条），它会自动触发组件重新渲染，从而实现实时更新的列表。
+ */
+export default function Home() {
+    const {isConnected} = useAccount();
+    // 1. 监听链上事件 (自动存储)
+    // 任何新发出的 InvoiceCreated 事件都会触发这里
+    useWatchContractEvent({
+        address: CONTRACT_ADDRESS,
+        abi: INVOICE_ABI,
+        eventName: 'InvoiceCreated',
+        pollingInterval: 10000, // 保持轮询，确保不漏掉事件
+        onLogs(logs) {
+            logs.forEach(async (log) => {
+                const tokenId = log.args?.tokenId?.toString() || '0';
+                const amount = log.args?.amount?.toString() || '0';
+                // 写入本地数据库 (持久化)
+                // put 方法会自动去重：如果 tokenId 已存在则不插入，不存在则新增
+                await db.invoices.put({
+                    tokenId,
+                    payer: log.args?.payer || '',
+                    amount,
+                    token: log.args?.token || '',
+                    timestamp: Date.now(), // 记录本机捕获到的时间
+                });
+            });
+        },
+    });
+    // 2. 从本地数据库读取数据 (实时展示)
+    // useLiveQuery 会在 db.invoices 变化时自动重新渲染
+    const invoices = useLiveQuery(() => db.invoices.orderBy('timestamp').reverse().toArray());
+    // 清空本地数据库的辅助函数
+    const clearLocalData = async () => {
+        if (confirm('确定要清空本地缓存吗？链上数据不会受影响。')) {
+            await db.invoices.clear();
+        }
+    };
+    return (
+        <div className="min-h-screen relative overflow-hidden bg-[#020617]">
+            <div
+                className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[100px] pointer-events-none"/>
+            <div
+                className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[100px] pointer-events-none"/>
+            <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <nav
+                    className="glass-panel sticky top-4 rounded-2xl px-6 py-4 flex justify-between items-center mb-16 z-50">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-blue-600 p-2 rounded-lg">
+                            <FileText className="text-white w-6 h-6"/>
+                        </div>
+                        <span className="text-xl font-bold text-white tracking-tight">Chain<span
+                            className="text-blue-500">Invoice</span></span>
+                    </div>
+                    <ConnectButton/>
+                </nav>
+                {!isConnected ? (
+                    <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+                        <div
+                            className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-2xl shadow-blue-500/10">
+                            <FileText size={48}/>
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-bold text-white">Real-time Listener</h1>
+                        <p className="text-slate-400 max-w-md text-lg">
+                            New events will be automatically captured and stored locally.
+                        </p>
+                    </div>
+                ) : (
+                    <div>
+                        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
+                            <div>
+                                <h2 className="text-3xl font-bold text-white mb-2">Dashboard</h2>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Database className="w-4 h-4 text-green-500"/>
+                                    <p className="text-slate-400 text-sm">
+                                        Total in Local DB: <span
+                                        className="text-white font-bold">{invoices?.length || 0}</span>
+                                    </p>
+                                </div>
+                                <p className="text-xs text-amber-400 flex items-center gap-1">
+                                    <AlertCircle size={12}/>
+                                    Only displays events captured since the app was opened.
+                                </p>
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={clearLocalData}
+                                    className="bg-slate-700 hover:bg-red-900/50 text-slate-300 hover:text-red-300 px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2"
+                                >
+                                    <Trash2 size={18}/> Clear Local DB
+                                </button>
+                                <Link
+                                    href="/create"
+                                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2"
+                                >
+                                    <Plus size={20}/>
+                                    Create Invoice
+                                </Link>
+                            </div>
+                        </div>
+                        {!invoices ? (
+                            <div className="glass-panel rounded-3xl p-20 text-center">
+                                <div
+                                    className="animate-pulse text-blue-500 mx-auto mb-4 h-8 w-8 bg-blue-500/20 rounded-full flex items-center justify-center">...
+                                </div>
+                                <p className="text-slate-400">Loading database...</p>
+                            </div>
+                        ) : invoices.length === 0 ? (
+                            <div
+                                className="glass-panel rounded-3xl p-20 text-center border border-dashed border-slate-700">
+                                <div
+                                    className="bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center text-slate-500 mx-auto mb-4">
+                                    <Database size={32}/>
+                                </div>
+                                <p className="text-slate-500 text-lg">Waiting for new invoices...</p>
+                                <p className="text-slate-600 text-sm mt-2">
+                                    This page listens to the blockchain. Create a new invoice to test the connection.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {invoices.map((inv, index) => (
+                                    <Link
+                                        key={inv.id || index}
+                                        href={`/invoice/${inv.tokenId}`}
+                                        className="glass-panel rounded-2xl p-6 border border-slate-800 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden"
+                                    >
+                                        <div
+                                            className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                                        <div className="relative z-10">
+                                            <div className="flex justify-between items-start mb-4">
+	                        <span
+                                className="text-xs font-mono text-slate-500 bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700/50">
+	                          ID: {inv.tokenId}
+	                        </span>
+                                                {/* 显示本机捕获时间 */}
+                                                <span className="text-xs text-slate-600">
+	                          {new Date(inv.timestamp).toLocaleTimeString()}
+	                        </span>
+                                            </div>
+                                            <p className="text-3xl font-bold text-white mb-1">
+                                                {(Number(inv.amount) / 1e18).toFixed(8)}
+                                            </p>
+                                            <p className="text-slate-400 text-sm mb-6">ETH</p>
+                                            <div className="flex items-center text-blue-400 text-sm font-semibold">
+                                                Pay To: {inv.payer.slice(0, 6)}...{inv.payer.slice(-4)}
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </main>
+        </div>
+    );
+}
