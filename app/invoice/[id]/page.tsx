@@ -1,7 +1,7 @@
 'use client';
 import { useParams } from 'next/navigation';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { formatEther } from 'viem';
+import {formatEther, parseEther} from 'viem';
 import { CONTRACT_ADDRESS, INVOICE_ABI } from '@/config/contract';
 import { ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useEffect } from 'react';
@@ -15,6 +15,8 @@ export default function InvoiceDetail() {
         functionName: 'invoices',
         args: [tokenId],
     });
+    
+    console.log('Invoice data:', invoiceData);
     // 结构化数据: [payee, amount, token, description, isPaid, createdAt]
     const details = invoiceData as readonly [
         string, // payee
@@ -44,7 +46,8 @@ export default function InvoiceDetail() {
             abi: INVOICE_ABI,
             functionName: 'payInvoice',
             args: [tokenId],
-            value: details[1],
+            //将ETH字符串转换为wei
+            value: parseEther(details[1].toString()),
         });
     };
     // 初始加载状态

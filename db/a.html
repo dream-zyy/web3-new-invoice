@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 Invoice</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.0.0/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.0.0/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+    const {useState, useEffect} = React;
+    // Status Badge Component
+    const StatusBadge = ({status}) => {
+        const getStatusStyle = (status) => {
+            switch (status) {
+                case 'Pending':
+                    return 'bg-yellow-100 text-yellow-800';
+                case 'Paid':
+                    return 'bg-green-100 text-green-800';
+                case 'Cancelled':
+                    return 'bg-gray-100 text-gray-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        };
+        return (
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(status)}`}>
+	                    {status}
+	                </span>
+        );
+    };
+    // Invoice Card Component
+    const InvoiceCard = ({invoice, onClick}) => {
+        return (
+            <div
+                className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => onClick(invoice)}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+	                                <span className="text-xs font-medium text-blue-600">
+	                                    {invoice.client.charAt(0)}
+	                                </span>
+                        </div>
+                        <div>
+                            <div className="font-medium text-gray-900">{invoice.client}</div>
+                            <div className="text-xs text-gray-500">{invoice.address}</div>
+                        </div>
+                    </div>
+                    <StatusBadge status={invoice.status}/>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-500">Invoice ID</div>
+                        <div className="font-medium text-gray-900">{invoice.id}</div>
+                    </div>
+                    <div className="text-right">
+                        <div className="font-bold text-lg text-gray-900">{invoice.amount} USDT</div>
+                        <div className="text-xs text-gray-500">{invoice.dueDate}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+    // Stat Card Component
+    const StatCard = ({title, value, subtitle, icon, trend}) => {
+        return (
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-500">{title}</span>
+                    <i className={`${icon} text-gray-400`}></i>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+                {subtitle && (
+                    <div className="text-sm text-gray-500">{subtitle}</div>
+                )}
+                {trend && (
+                    <div className="flex items-center mt-2">
+                        <i className="fas fa-arrow-up text-green-500 mr-1"></i>
+                        <span className="text-sm text-green-500 font-medium">{trend}</span>
+                    </div>
+                )}
+            </div>
+        );
+    };
+    // Main App Component
+    const App = () => {
+        const [invoices, setInvoices] = useState([
+            {
+                id: '#INV-0007',
+                client: 'Keegan',
+                address: '0x5460...6433',
+                amount: '100',
+                dueDate: 'Dec 24, 2025',
+                status: 'Pending'
+            },
+            {
+                id: '#INV-0006',
+                client: 'Open Invoice',
+                address: 'Anyone',
+                amount: '88',
+                dueDate: 'Dec 24, 2025',
+                status: 'Pending'
+            },
+            {
+                id: '#INV-0005',
+                client: 'Open',
+                address: 'Anyone',
+                amount: '35',
+                dueDate: 'Dec 26, 2025',
+                status: 'Cancelled'
+            },
+            {
+                id: '#INV-0004',
+                client: 'FFF',
+                address: 'Anyone',
+                amount: '20',
+                dueDate: 'Dec 25, 2025',
+                status: 'Pending'
+            },
+            {
+                id: '#INV-0002',
+                client: 'Jerry',
+                address: 'Anyone',
+                amount: '50',
+                dueDate: 'Dec 25, 2025',
+                status: 'Paid'
+            }
+        ]);
+        const [selectedInvoice, setSelectedInvoice] = useState(null);
+        const handleInvoiceClick = (invoice) => {
+            setSelectedInvoice(invoice);
+        };
+        return (
+            <div className="min-h-screen bg-gray-50">
+                {/* Header */}
+                <header className="bg-white border-b border-gray-200">
+                    <div className="px-6 py-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                                    <i className="fas fa-receipt text-white text-sm"></i>
+                                </div>
+                                <h1 className="text-xl font-bold text-gray-900">Web3 Invoice</h1>
+                            </div>
+                            <button
+                                className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors">
+                                <i className="fas fa-plus mr-2"></i>
+                                Create Invoice
+                            </button>
+                        </div>
+                    </div>
+                </header>
+                <div className="flex">
+                    {/* Sidebar */}
+                    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen">
+                        <nav className="p-4">
+                            <ul className="space-y-2">
+                                <li>
+                                    <a href="#"
+                                       className="flex items-center space-x-3 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg">
+                                        <i className="fas fa-th-large"></i>
+                                        <span>Dashboard</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#"
+                                       className="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
+                                        <i className="fas fa-file-invoice"></i>
+                                        <span>Invoices</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#"
+                                       className="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
+                                        <i className="fas fa-tint"></i>
+                                        <span>Faucet</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#"
+                                       className="flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
+                                        <i className="fas fa-cog"></i>
+                                        <span>Settings</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        {/* Connected Status */}
+                        <div className="absolute bottom-4 left-4 right-4">
+                            <div className="flex items-center space-x-2 text-sm text-green-600">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span>CONNECTED</span>
+                            </div>
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-xs font-bold">N</span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="text-xs font-medium text-gray-900">0xB73E...c725</div>
+                                        <div className="text-xs text-gray-500">BSC Testnet</div>
+                                    </div>
+                                    <i className="fas fa-external-link-alt text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                    {/* Main Content */}
+                    <main className="flex-1 p-6">
+                        {/* Welcome Section */}
+                        <div className="mb-8">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
+                            <p className="text-gray-600">Here's what's happening with your crypto invoices today.</p>
+                        </div>
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <StatCard
+                                title="TOTAL REVENUE"
+                                value="50 USDT"
+                                trend="+100% vs last month"
+                                icon="fas fa-dollar-sign"
+                            />
+                            <StatCard
+                                title="PENDING AMOUNT"
+                                value="208 USDT"
+                                subtitle="3 Invoices awaiting payment"
+                                icon="fas fa-clock"
+                            />
+                            <StatCard
+                                title="TOTAL INVOICES"
+                                value="5"
+                                subtitle="1 paid this month"
+                                icon="fas fa-file-invoice"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Recent Invoices */}
+                            <div className="lg:col-span-2">
+                                <div className="bg-white rounded-lg border border-gray-200">
+                                    <div className="p-6 border-b border-gray-200">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-semibold text-gray-900">Recent Invoices</h3>
+                                            <a href="#"
+                                               className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                                View All <i className="fas fa-arrow-right ml-1"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead>
+                                                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="pb-3">CLIENT</th>
+                                                    <th className="pb-3">INVOICE ID</th>
+                                                    <th className="pb-3">AMOUNT</th>
+                                                    <th className="pb-3">DUE DATE</th>
+                                                    <th className="pb-3">STATUS</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-200">
+                                                {invoices.map((invoice, index) => (
+                                                    <tr key={index} className="hover:bg-gray-50">
+                                                        <td className="py-4">
+                                                            <div className="flex items-center space-x-3">
+                                                                <div
+                                                                    className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+	                                                                            <span
+                                                                                    className="text-xs font-medium text-blue-600">
+	                                                                                {invoice.client.charAt(0)}
+	                                                                            </span>
+                                                                </div>
+                                                                <div>
+                                                                    <div
+                                                                        className="font-medium text-gray-900">{invoice.client}</div>
+                                                                    <div
+                                                                        className="text-xs text-gray-500">{invoice.address}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-sm text-gray-900">{invoice.id}</td>
+                                                        <td className="py-4 text-sm font-medium text-gray-900">{invoice.amount} USDT</td>
+                                                        <td className="py-4 text-sm text-gray-500">{invoice.dueDate}</td>
+                                                        <td className="py-4">
+                                                            <StatusBadge status={invoice.status}/>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Income Trends */}
+                            <div className="lg:col-span-1">
+                                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-gray-900">Income Trends</h3>
+                                        <span className="text-xs text-gray-500">Last 6 months</span>
+                                    </div>
+                                    <div className="h-48 flex items-end justify-between">
+                                        <svg className="w-full h-full" viewBox="0 0 300 150">
+                                            <polyline
+                                                fill="none"
+                                                stroke="#3B82F6"
+                                                strokeWidth="2"
+                                                points="20,120 60,110 100,100 140,90 180,85 220,70 260,40"
+                                            />
+                                            <circle cx="260" cy="40" r="4" fill="#3B82F6"/>
+                                        </svg>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                                        <span>JUL</span>
+                                        <span>AUG</span>
+                                        <span>SEP</span>
+                                        <span>OCT</span>
+                                        <span>NOV</span>
+                                        <span>DEC</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+                {/* Footer */}
+                <footer className="bg-white border-t border-gray-200 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500">Built on</span>
+                            <div className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium">BSC</div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <i className="fab fa-weixin text-gray-400 text-xl"></i>
+                            <span className="text-gray-500">test@example.com</span>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        );
+    };
+    ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>
